@@ -22,7 +22,7 @@ class AuthController extends Controller
             'data' => $validated,
         ], 200);
     }
- public function register(Request $request)
+    public function register(Request $request)
     {
         $validated = $request->validate([
             'nome' => ['required', 'string', 'max:255'],
@@ -56,5 +56,39 @@ class AuthController extends Controller
                 'email' => $user->email,
             ],
         ], 201);
+    }
+    public function login(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email'],
+            'senha' => ['required', 'string'],
+        ]);
+
+        $user = User::where('email', $validated['email'])->first();
+
+        if (!$user || !Hash::check($validated['senha'], $user->password)) {
+            return response()->json([
+                'message' => 'E-mail ou senha incorretos.'
+            ], 401);
+        }
+
+        if ($user->role !== 'responsavel') {
+            return response()->json([
+                'message' => 'Esta conta não possui acesso ao login de responsável.'
+            ], 403);
+        }
+
+        $token = $user->createToken('responsavel-token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login realizado com sucesso.',
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+        ], 200);
     }
 }
